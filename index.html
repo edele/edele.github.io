@@ -65,25 +65,82 @@ animation-fill-mode: forwards;
 </div>
 
 <script>
-if ('ondeviceorientation' in window) {
-    window.addEventListener('deviceorientation', function(event) {
-        if (event.beta === null && event.gamma === null) return;
+(function IIFE() {
+    if ('ondeviceorientation' in window) {
+        const all = document.getElementById('all');
 
-        const getEl = document.getElementById.bind(document);
-        const topShift = Math.min(80, Math.abs(event.beta));
-        const rotateY = Math.min(30, Math.abs(event.gamma * 0.8));
+        window.addEventListener('deviceorientation', function(event) {
+            if (event.beta === null && event.gamma === null) return;
 
-        getEl('all').style.webkitTransform = getEl('all').style.transform = [
-            `rotateY(${rotateY}deg)`,
-            `translateY(${topShift}px)`
-        ].join(' ');
+            window.requestAnimationFrame(function onForceFrame() {
+                const topShift = Math.min(80, Math.abs(event.beta));
+                const rotateY = Math.min(30, Math.abs(event.gamma * 0.8));
 
-        getEl('all').style.textShadow = [
-            `${event.gamma * 0.8}px`,
-            '3px',
-            `  ${Math.abs(event.gamma * 0.5)}px`,
-            'rgba(0, 0, 0, 0.3)'
-        ].join(' ');
+                all.style.webkitTransform = all.style.transform = [
+                    `rotateY(${rotateY}deg)`,
+                    `translateY(${topShift}px)`
+                ].join(' ');
+
+                all.style.textShadow = [
+                    `${event.gamma * 0.8}px`,
+                    '3px',
+                    `  ${Math.abs(event.gamma * 0.5)}px`,
+                    'rgba(0, 0, 0, 0.3)'
+                ].join(' ');
+            });
+        });
+    }
+
+    function listenForceTouchOn(elem, onForce = () => {}) {
+        var touch = null;
+
+        ['touchstart', 'touchmove'].forEach(event => {
+            function checkForce(e) {
+                if ('ontouchforcechange' in document === false) {
+                    touch = e.touches[0];
+                    setTimeout(refreshForceValue.bind(touch), 10);
+                }
+            }
+
+            elem.addEventListener(
+                event,
+                function onTouch(e) {
+                    e.preventDefault();
+                    checkForce(e);
+                },
+                false
+            );
+        });
+
+        elem.addEventListener(
+            'touchend',
+            function onTouchEnd(e) {
+                e.preventDefault();
+                setTimeout(onForce.bind(null, 0), 10);
+                touch = null;
+            },
+            false
+        );
+        elem.addEventListener(
+            'webkitmouseforcechanged',
+            function onClickForceChange(e) {
+                onForce(e.webkitForce / 3);
+            },
+            false
+        );
+        elem.addEventListener(
+            'touchforcechange',
+            function onTouchForceChange(e) {
+                onForce(e.changedTouches[0].force);
+            },
+            false
+        );
+    }
+
+    listenForceTouchOn(document, function onForce(forceValue) {
+        window.requestAnimationFrame(function onForceFrame() {
+            document.body.style.webkitFilter = `blur(${5 * forceValue}px)`;
+        });
     });
-}
+})();
 </script>
